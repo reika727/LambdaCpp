@@ -10,39 +10,15 @@
 #include <vector>
 
 namespace lambda {
-    class expression;
-
-    /**
-     * @brief チャーチエンコーディング / デコーディングの実装
-     */
-    class church_code final {
-    public:
-        church_code() = delete;
-        static expression encode(std::size_t);
-        static std::size_t decode(expression);
-    };
-
-    /**
-     * @brief スコットエンコーディング / デコーディングの実装
-     */
-    class scott_code final {
-    public:
-        scott_code() = delete;
-        template <class InputIterator>
-        static expression encode(InputIterator, InputIterator);
-        template <class OutputIterator>
-        static void decode(expression, OutputIterator);
-    };
-
     /**
      * @brief ラムダ式の実装
      */
     class expression final : std::function<expression(expression)> {
         using std::function<expression(expression)>::function;
         /* デコード処理だけは pass_by_value を使ってもよい */
-        friend std::size_t church_code::decode(expression);
+        friend std::size_t church_decode(expression);
         template <class OutputIterator>
-        friend void scott_code::decode(expression, OutputIterator);
+        friend void scott_decode(expression, OutputIterator);
 
     private:
         /**
@@ -68,6 +44,23 @@ namespace lambda {
             };
         }
     };
+
+    /**
+     * @brief 自然数をチャーチエンコーディングする
+     * @param[in] n エンコードする自然数
+     * @returns チャーチエンコーディングによるエンコード結果
+     */
+    inline expression church_encode(std::size_t n)
+    {
+        return [n](expression f) {
+            return [n, f](expression x) {
+                for (std::size_t i = 0; i < n; ++i) {
+                    x = f(x);
+                }
+                return x;
+            };
+        };
+    }
 
     /**
      * @brief 一般的なコンビネータのまとめ
@@ -166,7 +159,7 @@ namespace lambda {
         /** チャーチエンコーディングされた自然数の乗算 */
         static inline const expression mult = [](expression n) {
             return [n](expression m) {
-                return n(add(m))(church_code::encode(0));
+                return n(add(m))(church_encode(0));
             };
         };
 
@@ -228,28 +221,11 @@ namespace lambda {
     }
 
     /**
-     * @brief 自然数をチャーチエンコーディングする
-     * @param[in] n エンコードする自然数
-     * @returns チャーチエンコーディングによるエンコード結果
-     */
-    inline expression church_code::encode(std::size_t n)
-    {
-        return [n](expression f) {
-            return [n, f](expression x) {
-                for (std::size_t i = 0; i < n; ++i) {
-                    x = f(x);
-                }
-                return x;
-            };
-        };
-    }
-
-    /**
      * @brief チャーチエンコーディングされた自然数をデコードする
      * @param[in] n チャーチエンコーディングされた自然数
      * @returns デコード結果
      */
-    inline std::size_t church_code::decode(expression n)
+    inline std::size_t church_decode(expression n)
     {
         std::size_t decoded = 0;
         n.pass_by_value(
@@ -266,7 +242,7 @@ namespace lambda {
      * @return スコットエンコーディングによるエンコード結果
      */
     template <class InputIterator>
-    inline expression scott_code::encode(InputIterator first, InputIterator last)
+    inline expression scott_encode(InputIterator first, InputIterator last)
     {
         return std::accumulate(
             std::reverse_iterator(last), std::reverse_iterator(first),
@@ -276,13 +252,14 @@ namespace lambda {
             });
     }
 
+
     /**
      * @brief スコットエンコーディングによるリストを分解する
      * @param[in] list スコットエンコーディングによるリスト
      * @param[out] result リストに含まれていた各ラムダ式の出力先
      */
     template <class OutputIterator>
-    inline void scott_code::decode(expression list, OutputIterator result)
+    inline void scott_decode(expression list, OutputIterator result)
     {
         expression _output_list = [&result](expression f) {
             return [&result, f](expression l) {
@@ -314,9 +291,9 @@ namespace lambda {
     inline void run_on_integer_sequence(InputIterator first, InputIterator last, expression program, OutputIterator result)
     {
         std::vector<expression> church_encoded;
-        std::transform(first, last, std::back_inserter(church_encoded), church_code::encode);
+        std::transform(first, last, std::back_inserter(church_encoded), church_encode);
         std::vector<expression> scott_decoded;
-        scott_code::decode(program(scott_code::encode(church_encoded.begin(), church_encoded.end())), std::back_inserter(scott_decoded));
-        std::transform(scott_decoded.begin(), scott_decoded.end(), result, church_code::decode);
+        scott_decode(program(scott_encode(church_encoded.begin(), church_encoded.end())), std::back_inserter(scott_decoded));
+        std::transform(scott_decoded.begin(), scott_decoded.end(), result, church_decode);
     }
 }

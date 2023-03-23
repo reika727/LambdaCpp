@@ -19,7 +19,7 @@ int main()
         [](lambda::expression f) {
             return [f](lambda::expression n) {
                 return is_zero(n)(
-                    lambda::church_code::encode(1)
+                    lambda::church_encode(1)
                 )(
                     mult(n)(f(pred(n)))
                 );
@@ -102,10 +102,8 @@ $ ./a.out
     - イオタコンビネータ（`i`）
     - チャーチ自然数への各種算術（`succ`, `pred`, `add`, `sub`, `mult`, `is_zero`）
     - スコットリストへの各種演算（`cons`, `car`, `cdr`, `empty_list`, `is_empty`）
-  - `class church_code`
-    - `static expression encode(std::size_t n)` : `n` をチャーチエンコーディングしたラムダ式を作ります。
-    - `static std::size_t decode(expression n)` : `n` をデコードした自然数を返却します。
-  - `class scott_code`
-    - `static expression encode(InputIterator first, InputIterator last)` : [`first`, `last`) 内の `expression` オブジェクトをスコットエンコーディングしてリストを作ります。
-    - `static void decode(expression list, OutputIterator result)` : スコットリスト `list` をデコードして `result` に書き込みます。
+  - `expression church_encode(std::size_t n)` : `n` をチャーチエンコーディングしたラムダ式を作ります。
+  - `std::size_t church_decode(expression n)` : `n` をデコードした自然数を返却します。
+  - `expression scott_encode(InputIterator first, InputIterator last)` : [`first`, `last`) 内の `expression` オブジェクトをスコットエンコーディングしてリストを作ります。
+  - `void scott_decode(expression list, OutputIterator result)` : スコットリスト `list` をデコードして `result` に書き込みます。
   - `void run_on_integer_sequence(InputIterator first, InputIterator last, expression program, OutputIterator result)` : このライブラリのミソです。[`first`, `last`) 内の自然数をチャーチエンコーディングしたのちスコットエンコーディングでまとめたものを `program` に引数として与え、それをデコードして自然数の列に戻したものを `result` に書き込みます。
